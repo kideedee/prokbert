@@ -6,7 +6,7 @@ from sklearn.metrics import precision_recall_fscore_support
 from transformers import TrainerCallback, TrainerState, TrainerControl, EarlyStoppingCallback, DataCollatorWithPadding
 
 from env_config import config
-from phg_cls_log import log
+from phg_cls_log import experiment_log as log
 
 
 class CustomLoggingCallback(TrainerCallback):
@@ -134,15 +134,17 @@ if __name__ == '__main__':
         raise SystemError('GPU device not found')
     else:
         device_name = torch.cuda.get_device_name(0)
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
         print(f'Found GPU at: {device_name}')
     num_cores = os.cpu_count()
     print(f'Number of available CPU cores: {num_cores}')
 
     model_path = 'neuralbioinfo/prokbert-mini-phage'
 
-    for i in range(4, 5):
-        if i != 4:
-            continue
+    for i in range(7, 8):
+        # if i != 4:
+        #     continue
 
         if i == 0:
             min_size = 100
@@ -163,7 +165,7 @@ if __name__ == '__main__':
         elif i == 4:
             min_size = 50
             max_size = 100
-            batch_size = 32
+            batch_size = 192
         elif i == 5:
             min_size = 100
             max_size = 200
@@ -182,10 +184,12 @@ if __name__ == '__main__':
         group = f"{min_size}_{max_size}"
         for j in range(5):
             fold = j + 1
-            if fold != 1:
-                continue
+            # if fold != 1:
+            #     continue
 
-            data_dir = os.path.join(config.PROKBERT_OUTPUT_DIR_TEST, f"{group}/fold_{fold}")
+            log.info(f"Processing group: {group}/{fold}")
+
+            data_dir = os.path.join(config.PROKBERT_OUTPUT_DIR, f"{group}/fold_{fold}")
 
             tokenized_train = load_from_disk(os.path.join(data_dir, "processed_train_dataset"))
             tokenized_val = load_from_disk(os.path.join(data_dir, "processed_val_dataset"))
@@ -197,13 +201,21 @@ if __name__ == '__main__':
 
             training_args = TrainingArguments(
                 output_dir=tmp_output,
-                do_train=False,
-                do_eval=False,
-                per_device_eval_batch_size=32,
-                fp16=True,
+                per_device_train_batch_size=batch_size,
+                per_device_eval_batch_size=batch_size,
+                bf16=True,
+                fp16=False,
                 remove_unused_columns=False,
 
-                num_train_epochs=3,
+                lr_scheduler_type="cosine",  # Better convergence
+                warmup_ratio=0.1,
+
+                optim="adamw_torch_fused",  # Optimized for CUDA
+                learning_rate=1e-5,
+                weight_decay=0.01,
+                max_grad_norm=1.0,
+
+                num_train_epochs=10,
 
                 # Evaluation and saving
                 evaluation_strategy="epoch",

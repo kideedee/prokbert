@@ -22,10 +22,10 @@ if __name__ == '__main__':
     for i in range(5):
         fold = i + 1
         max_length_tokenizer = 512
-        if fold != 1:
-            continue
+        # if fold != 1:
+        #     continue
 
-        for j in range(4, 8):
+        for j in range(4):
             if j == 0:
                 min_size = 100
                 max_size = 400
@@ -61,8 +61,8 @@ if __name__ == '__main__':
             else:
                 raise ValueError
 
-            if j != 4:
-                continue
+            # if j != 4:
+            #     continue
 
             group = f"{min_size}_{max_size}"
             train_file = f"{config.CONTIG_OUTPUT_DATA_DIR_FIX_BUG}/{group}/fold_{fold}/train/data.csv"
@@ -71,7 +71,7 @@ if __name__ == '__main__':
             log.info(f"train_file: {train_file}")
             log.info(f"valid_file: {valid_file}")
 
-            output_dir = os.path.join(config.PROKBERT_OUTPUT_DIR_TEST, f"{group}/fold_{fold}")
+            output_dir = os.path.join(config.PROKBERT_OUTPUT_DIR, f"{group}/fold_{fold}")
             os.makedirs(output_dir, exist_ok=True)
             output_prepared_train_dataset = os.path.join(output_dir, f"processed_train_dataset")
             output_prepared_val_dataset = os.path.join(output_dir, f"processed_val_dataset")
